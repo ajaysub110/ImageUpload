@@ -1,12 +1,16 @@
 package com.example.ajays.ltimageupload;
 
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.net.Uri;
 import android.os.Environment;
-import android.support.v7.app.AppCompatActivity;
+
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -14,14 +18,26 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.OnProgressListener;
+import com.google.firebase.storage.StorageReference;
+import com.google.firebase.storage.UploadTask;
+
 import java.io.BufferedOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.text.DecimalFormat;
 import java.util.Random;
+import java.util.UUID;
 
+import static android.os.Environment.getExternalStorageDirectory;
 import static android.os.Environment.getExternalStoragePublicDirectory;
 
 public class MainActivity extends AppCompatActivity {
@@ -33,6 +49,9 @@ public class MainActivity extends AppCompatActivity {
     private TextView compressedSizeTextView;
     private File actualImage;
     private File compressedImage;
+
+    FirebaseStorage storage;
+    StorageReference storageReference;
 
     long tStart, tEnd;
 
@@ -48,6 +67,9 @@ public class MainActivity extends AppCompatActivity {
 
         actualImageView.setBackgroundColor(getRandomColor());
         clearImage();
+
+        storage = FirebaseStorage.getInstance();
+        storageReference = storage.getReference();
     }
 
     public void chooseImage(View view) {
@@ -67,7 +89,42 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public void uploadImage(View view){
+    public void uploadImage(View view) throws FileNotFoundException {
+
+
+        if(compressedImage != null){
+            final ProgressDialog progressDialog = new ProgressDialog(this);
+            progressDialog.setTitle("Uploading...");
+            progressDialog.show();
+
+            tStart = System.currentTimeMillis();
+            InputStream stream = new FileInputStream(compressedImage);
+            StorageReference ref = storageReference.child("images/"+ UUID.randomUUID().toString());
+            ref.putStream(stream)
+                    .addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
+                        @Override
+                        public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
+                            progressDialog.dismiss();
+                            tEnd = System.currentTimeMillis();
+                            Toast.makeText(MainActivity.this, "Uploaded in " + (tEnd-tStart), Toast.LENGTH_LONG).show();
+                        }
+                    })
+                    .addOnFailureListener(new OnFailureListener() {
+                        @Override
+                        public void onFailure(@NonNull Exception e) {
+                            progressDialog.dismiss();
+                            Toast.makeText(MainActivity.this, "Failed "+e.getMessage(), Toast.LENGTH_SHORT).show();
+                        }
+                    })
+                    .addOnProgressListener(new OnProgressListener<UploadTask.TaskSnapshot>() {
+                        @Override
+                        public void onProgress(UploadTask.TaskSnapshot taskSnapshot) {
+                            double progress = (100.0*taskSnapshot.getBytesTransferred()/taskSnapshot
+                                    .getTotalByteCount());
+                            progressDialog.setMessage("Uploaded "+(int)progress+"%");
+                        }
+                    });
+        }
     }
 
     private void getResizedImage(Context context, File inputImage) {
@@ -100,8 +157,7 @@ public class MainActivity extends AppCompatActivity {
             int inWidth = bitmap.getWidth();
             int inHeight = bitmap.getHeight();
             Bitmap scaledBitmap = Bitmap.createScaledBitmap(bitmap, inWidth, inHeight, false);
-            resizedImage = new File(getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).
-                    getAbsolutePath() + "/resize" + 0 + ".jpg");
+            resizedImage = new File(getExternalStorageDirectory().getAbsolutePath() + "/resize0.jpg");
             OutputStream fOut = new BufferedOutputStream(new FileOutputStream(resizedImage));
             scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 50, fOut);
             fOut.flush();
