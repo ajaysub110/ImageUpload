@@ -1,8 +1,7 @@
-package com.example.ajays.imageupload;
+package com.example.ajays.ltimageupload;
 
 import android.content.Context;
 import android.content.Intent;
-import android.content.res.AssetFileDescriptor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
@@ -15,18 +14,8 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.google.auth.oauth2.ServiceAccountCredentials;
-import com.google.cloud.storage.Blob;
-import com.google.cloud.storage.BlobId;
-import com.google.cloud.storage.BlobInfo;
-import com.google.cloud.storage.Storage;
-import com.google.cloud.storage.StorageOptions;
-
 import java.io.BufferedOutputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileDescriptor;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -79,29 +68,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void uploadImage(View view){
-        BlobId blobId = BlobId.of("lt-images", "test1");
-        BlobInfo blobInfo = BlobInfo.newBuilder(blobId).setContentType("image/jpeg").build();
-        BitmapFactory.Options options = new BitmapFactory.Options();
-        Bitmap bitmap = BitmapFactory.decodeFile(actualImage.getAbsolutePath(),options);
-        bitmap = Bitmap.createScaledBitmap(bitmap,bitmap.getWidth(),bitmap.getHeight(),true);
-        ByteArrayOutputStream stream = new ByteArrayOutputStream();
-        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream);
-
-        try {
-//            AssetFileDescriptor assetFileDescriptor = getAssets().openFd("gcs_api_key.json");
-//            FileDescriptor fileDescriptor = assetFileDescriptor.getFileDescriptor();
-            Storage storage = StorageOptions.newBuilder()
-                    .setCredentials(ServiceAccountCredentials
-                            .fromStream(new FileInputStream(String.valueOf(getAssets().open("gcs_api_key.json")))))
-                    .build()
-                    .getService();
-            Toast.makeText(MainActivity.this, "Hello", Toast.LENGTH_SHORT).show();
-            storage.create(blobInfo,stream.toByteArray());
-        } catch (IOException e) {
-            e.printStackTrace();
-            Log.e("ImageUpload", "ioexception", e);
-            Toast.makeText(MainActivity.this, "Sorry boss", Toast.LENGTH_SHORT).show();
-        }
     }
 
     private void getResizedImage(Context context, File inputImage) {

@@ -1,4 +1,4 @@
-package com.example.ajays.imageupload;
+package com.example.ajays.ltimageupload;
 
 import org.junit.Test;
 
