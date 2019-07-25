@@ -6,8 +6,6 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
-import android.net.Uri;
-import android.os.Environment;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -25,6 +23,11 @@ import com.google.firebase.storage.OnProgressListener;
 import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
 
+import net.gotev.uploadservice.MultipartUploadRequest;
+import net.gotev.uploadservice.UploadNotificationConfig;
+import net.gotev.uploadservice.UploadService;
+import net.gotev.uploadservice.okhttp.OkHttpStack;
+
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -33,12 +36,12 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+
 import java.text.DecimalFormat;
 import java.util.Random;
 import java.util.UUID;
 
 import static android.os.Environment.getExternalStorageDirectory;
-import static android.os.Environment.getExternalStoragePublicDirectory;
 
 public class MainActivity extends AppCompatActivity {
     private static final int PICK_IMAGE_REQUEST = 1;
@@ -50,7 +53,7 @@ public class MainActivity extends AppCompatActivity {
     private File actualImage;
     private File compressedImage;
 
-    FirebaseStorage storage;
+    FirebaseStorage firebaseStorage;
     StorageReference storageReference;
 
     long tStart, tEnd;
@@ -68,8 +71,11 @@ public class MainActivity extends AppCompatActivity {
         actualImageView.setBackgroundColor(getRandomColor());
         clearImage();
 
-        storage = FirebaseStorage.getInstance();
-        storageReference = storage.getReference();
+        firebaseStorage = FirebaseStorage.getInstance();
+        storageReference = firebaseStorage.getReference();
+
+        UploadService.NAMESPACE = BuildConfig.APPLICATION_ID;
+        UploadService.HTTP_STACK = new OkHttpStack(); // a new client will be automatically created
     }
 
     public void chooseImage(View view) {
@@ -90,23 +96,21 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void uploadImage(View view) throws FileNotFoundException {
-
-
         if(compressedImage != null){
             final ProgressDialog progressDialog = new ProgressDialog(this);
             progressDialog.setTitle("Uploading...");
             progressDialog.show();
 
-            tStart = System.currentTimeMillis();
             InputStream stream = new FileInputStream(compressedImage);
             StorageReference ref = storageReference.child("images/"+ UUID.randomUUID().toString());
+            tStart = System.currentTimeMillis();
             ref.putStream(stream)
                     .addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
                         @Override
                         public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
                             progressDialog.dismiss();
                             tEnd = System.currentTimeMillis();
-                            Toast.makeText(MainActivity.this, "Uploaded in " + (tEnd-tStart), Toast.LENGTH_LONG).show();
+                            Toast.makeText(MainActivity.this, "Uploaded in " + (tEnd-tStart)/1000. + " seconds", Toast.LENGTH_LONG).show();
                         }
                     })
                     .addOnFailureListener(new OnFailureListener() {
@@ -124,6 +128,19 @@ public class MainActivity extends AppCompatActivity {
                             progressDialog.setMessage("Uploaded "+(int)progress+"%");
                         }
                     });
+        }
+    }
+
+    public void uploadImageGotev(View view) {
+        try {
+            String uploadId =
+                    new MultipartUploadRequest(MainActivity.this, "https://console.cloud.google.com/storage/browser/ltimageupload-245900.appspot.com")
+                            .addFileToUpload(compressedImage.getAbsolutePath(), "")
+                            .setNotificationConfig(new UploadNotificationConfig())
+                            .setMaxRetries(2)
+                            .startUpload();
+        } catch (Exception exc) {
+            Log.e("imageUpload", exc.getMessage(), exc);
         }
     }
 

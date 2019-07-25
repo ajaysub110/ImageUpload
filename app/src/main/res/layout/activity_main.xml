@@ -117,7 +117,14 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:onClick="uploadImage"
-            android:text="Upload image"/>
+            android:text="Upload image with Firebase"/>
+
+        <Button
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:onClick="uploadImageGotev"
+            android:text="Compress image with Gotev"/>
 
     </LinearLayout>
 </ScrollView>
